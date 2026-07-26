@@ -47,8 +47,9 @@ export default function CreateScreen() {
     }
   };
 
-  const handleAiFinder = () => {
-    openAiAssistant({ role: 'assistant', entityTitle: 'Creation Launcher' });
+  const handleAiFinder = async () => {
+    await openAiAssistant({ role: 'assistant', entityTitle: 'Creation Launcher' });
+    router.push('/(modals)/ai-assistant');
   };
 
   const handleStartWithProduct = () => {

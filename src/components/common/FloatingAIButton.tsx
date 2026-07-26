@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { DesignTokens } from '../../constants/DesignTokens';
@@ -14,15 +15,21 @@ export const FloatingAIButton: React.FC<FloatingAIButtonProps> = ({
   label, 
   context 
 }) => {
+  const router = useRouter();
   const { t } = useTranslation();
   const openAiAssistant = useAiStore(state => state.openAiAssistant);
   
   const displayLabel = label || t('gallery.askCurator');
 
+  const handlePress = async () => {
+    await openAiAssistant(context);
+    router.push('/(modals)/ai-assistant');
+  };
+
   return (
     <TouchableOpacity 
       style={styles.container} 
-      onPress={() => openAiAssistant(context)}
+      onPress={handlePress}
       activeOpacity={0.85}
     >
       <View style={styles.iconContainer}>
@@ -37,7 +44,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 16,
-    bottom: 14, // Expo Router Tab Screen bottom: 0 is at the top edge of the tab bar. 14pt anchors it cleanly right above the tab bar!
+    bottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#141414',

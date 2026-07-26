@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,6 @@ import { useAiStore } from '../../stores/useAiStore';
 export default function GiftsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const openAiAssistant = useAiStore(state => state.openAiAssistant);
   const [occasions, setOccasions] = useState<GiftOccasion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,6 +32,11 @@ export default function GiftsScreen() {
     }
     loadGifts();
   }, []);
+
+  const handleOpenAi = async () => {
+    await openAiAssistant({ role: 'concierge', entityTitle: 'Gifts Finder' });
+    router.push('/(modals)/ai-assistant');
+  };
 
   const filteredProducts = activeBudgetFilter 
     ? products.filter(p => p.basePriceCad <= activeBudgetFilter)
@@ -60,7 +64,7 @@ export default function GiftsScreen() {
 
           <TouchableOpacity 
             style={styles.aiBannerBtn}
-            onPress={() => openAiAssistant({ role: 'concierge', entityTitle: 'Gifts Finder' })}
+            onPress={handleOpenAi}
             activeOpacity={0.85}
           >
             <Ionicons name="chatbubbles-outline" size={16} color="#141414" />
