@@ -6,7 +6,9 @@ import {
   ScrollView, 
   TouchableOpacity, 
   TextInput, 
-  ActivityIndicator 
+  ActivityIndicator,
+  Keyboard,
+  Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,7 +30,7 @@ export default function AIAssistantModal() {
   const closeAiAssistant = useAiStore(state => state.closeAiAssistant);
 
   const [inputText, setInputText] = useState('');
-  const topInsetPadding = Math.max(insets.top, 16);
+  const [keyboardPad, setKeyboardPad] = useState(0);
 
   const quickPrompts = [
     t('aiModal.quickPrompt1'),
@@ -37,12 +39,28 @@ export default function AIAssistantModal() {
     t('aiModal.quickPrompt4'),
   ];
 
+  // 1. Listen for real keyboard frame (Memoria LEARNINGS.md Rule 1)
   useEffect(() => {
-    // Scroll to bottom when messages update
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      e => setKeyboardPad(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardPad(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // 2. Auto-scroll to end when messages or keyboard frame updates
+  useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
-  }, [messages, isThinking]);
+  }, [messages, isThinking, keyboardPad]);
 
   const handleSend = (textToSend?: string) => {
     const query = textToSend || inputText;
@@ -53,8 +71,8 @@ export default function AIAssistantModal() {
 
   return (
     <View style={styles.outerWrapper}>
-      {/* Header Bar - Clears iOS Status Bar & Dynamic Island */}
-      <View style={[styles.headerBar, { paddingTop: topInsetPadding + 6 }]}>
+      {/* Header Bar - Fixed compact padding (No double top padding gap) */}
+      <View style={styles.headerBar}>
         <View style={styles.titleContainer}>
           <View style={styles.sparkleIcon}>
             <Ionicons name="sparkles" size={16} color="#FFFFFF" />
@@ -73,12 +91,14 @@ export default function AIAssistantModal() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages Scroll Area */}
+      {/* Messages Scroll Area - Modal-Aware Keyboard Insets */}
       <ScrollView 
         ref={scrollViewRef}
         style={styles.messagesContainer} 
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
       >
         {messages.map(msg => (
           <View 
@@ -116,25 +136,30 @@ export default function AIAssistantModal() {
         )}
       </ScrollView>
 
-      {/* Quick Prompt Chips */}
-      <View style={styles.quickPromptsContainer}>
-        <Text style={styles.quickPromptHeader}>{t('aiModal.demoQueries')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPromptsScroll}>
-          {quickPrompts.map((p, idx) => (
-            <TouchableOpacity 
-              key={idx} 
-              style={styles.promptChip} 
-              onPress={() => handleSend(p)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.promptChipText}>{p}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* Quick Prompt Chips (hidden when keyboard is open to save space) */}
+      {keyboardPad === 0 && (
+        <View style={styles.quickPromptsContainer}>
+          <Text style={styles.quickPromptHeader}>{t('aiModal.demoQueries')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPromptsScroll}>
+            {quickPrompts.map((p, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.promptChip} 
+                onPress={() => handleSend(p)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.promptChipText}>{p}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
-      {/* Input Bar */}
-      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      {/* Input Bar - Dynamically lifts above system keyboard */}
+      <View style={[
+        styles.inputBar, 
+        { paddingBottom: keyboardPad > 0 ? keyboardPad : Math.max(insets.bottom, 12) }
+      ]}>
         <TextInput 
           style={styles.input}
           placeholder={t('aiModal.placeholder')}
@@ -161,7 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing.md,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: DesignTokens.colors.cardBorder,
     backgroundColor: '#FAF8F5',
