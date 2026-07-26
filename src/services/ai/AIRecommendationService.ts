@@ -1,34 +1,60 @@
-import { AIMessage, AIGiftQuery } from '../../types/ai';
+import { AIMessage, AIGiftQuery, AIContext } from '../../types/ai';
 import { GiftConcept } from '../../types/gift';
 import { MOCK_GIFT_CONCEPTS } from '../../constants/mockData';
 import i18n from '../../i18n';
 
 export class AIRecommendationService {
-  async getInitialGreeting(context?: { role?: string; entityTitle?: string }): Promise<AIMessage> {
+  async getInitialGreeting(context?: AIContext): Promise<AIMessage> {
     const isZh = i18n.language.startsWith('zh');
     
-    if (context?.entityTitle) {
-      const greetingText = isZh
-        ? `您好！我是您的 **AI 礼品顾问**。针对您正在浏览的 **“${context.entityTitle}”**，我可以为您挑选相符的礼品款式、搭配色彩基调，或推荐相似风格的艺术作品。您想探索哪些方向？`
-        : `Hello! I am your **AI Art Concierge**. Looking at **"${context.entityTitle}"**, I can suggest complementary gift items, color palettes, or similar artwork styles. What would you like to explore?`;
+    // 1. Triggered from Artwork Detail Page
+    if (context?.entityType === 'artwork' || (context?.entityTitle && context?.role === 'curator')) {
+      const artTitle = context.entityTitle || 'Artwork';
+      const matched = MOCK_GIFT_CONCEPTS.slice(0, 2);
+
+      const text = isZh
+        ? `您好！我是您的 **AI 灵感顾问**。针对艺术作品 **“${artTitle}”**，我已为您智能生成了 2 款最匹配的实体礼品概念：`
+        : `Hello! Looking at artwork **"${artTitle}"**, I generated 2 curated physical gift concepts for you:`;
 
       return {
         id: `ai-greet-${Date.now()}`,
         sender: 'assistant',
-        text: greetingText,
+        text,
         timestamp: new Date().toISOString(),
+        recommendations: matched,
       };
     }
 
+    // 2. Triggered from Product Detail Page
+    if (context?.entityType === 'product') {
+      const prodTitle = context.entityTitle || 'Product';
+      const matched = MOCK_GIFT_CONCEPTS.slice(1, 3);
+
+      const text = isZh
+        ? `您好！针对礼品载体 **“${prodTitle}”**，我已为您匹配了最动人的正版艺术图样与专属铭文：`
+        : `Hello! For physical gift **"${prodTitle}"**, I matched recommended licensed artworks and gift card inscriptions:`;
+
+      return {
+        id: `ai-greet-${Date.now()}`,
+        sender: 'assistant',
+        text,
+        timestamp: new Date().toISOString(),
+        recommendations: matched,
+      };
+    }
+
+    // 3. General AI Concierge Trigger (from Gifts tab "用 AI 寻觅礼品灵感" or FAB "灵感顾问")
+    const matched = MOCK_GIFT_CONCEPTS.slice(0, 3);
     const greetingText = isZh
-      ? `您好！我是 **MyArtsyGift AI 礼品顾问**。告诉我您的送礼需求（如送礼对象、节日场合、偏好的艺术风格或预算），我将为您匹配精致的艺术礼品组合。`
-      : `Hello! I am your **MyArtsyGift AI Concierge**. Tell me about your gift need (e.g. recipient, occasion, preferred style, or budget), and I will curate visual art gift concepts for you.`;
+      ? `您好！我是 **MyArtsyGift AI 礼品顾问**。请告诉我您的送礼需求（如送礼对象、节日场合、偏好风格或预算），或从下方热门灵感中选择：`
+      : `Hello! I am your **MyArtsyGift AI Concierge**. Tell me about your gift need (recipient, occasion, style, or budget), or select from popular gift queries below:`;
 
     return {
       id: `ai-greet-${Date.now()}`,
       sender: 'assistant',
       text: greetingText,
       timestamp: new Date().toISOString(),
+      recommendations: matched,
     };
   }
 
@@ -36,7 +62,6 @@ export class AIRecommendationService {
     const textLower = userText.toLowerCase();
     const isZh = i18n.language.startsWith('zh');
     
-    // Match concepts based on intent keywords (English & Chinese)
     let matchedConcepts: GiftConcept[] = [];
 
     if (
@@ -58,7 +83,6 @@ export class AIRecommendationService {
       matchedConcepts = [...MOCK_GIFT_CONCEPTS].slice(0, 3);
     }
 
-    // Apply budget filter if query contains numeric hints (e.g. 50, 100)
     let maxBudget = queryParams?.budgetMaxCad;
     if (!maxBudget) {
       if (textLower.includes('50') || textLower.includes('fifty')) maxBudget = 50;
@@ -79,7 +103,7 @@ export class AIRecommendationService {
 
     if (isZh) {
       responseText = count > 0 
-        ? `我为您精心匹配了 ${count} 款艺术礼品方案。您可以直接在推荐卡片上点击 **“定制礼品”**，一键在 2D 工作室中打开并调整：`
+        ? `我为您精心匹配了 ${count} 款艺术礼品方案。您可以直接在卡片上点击 **“定制礼品”** 一键进入 2D 工作室调整：`
         : `以下是为您精选的艺术送礼灵感方案：`;
     } else {
       responseText = count > 0 

@@ -1,15 +1,15 @@
 import { create } from 'zustand';
-import { AIMessage } from '../types/ai';
+import { AIMessage, AIContext } from '../types/ai';
 import { aiRecommendationService } from '../services/ai/AIRecommendationService';
 
 interface AiState {
   isOpen: boolean;
-  activeContext?: { role?: string; entityTitle?: string; entityId?: string };
+  activeContext?: AIContext;
   messages: AIMessage[];
   isThinking: boolean;
 
   // Actions
-  openAiAssistant: (context?: { role?: string; entityTitle?: string; entityId?: string }) => Promise<void>;
+  openAiAssistant: (context?: AIContext) => Promise<void>;
   closeAiAssistant: () => void;
   sendMessage: (text: string) => Promise<void>;
   resetConversation: () => void;
@@ -22,7 +22,9 @@ export const useAiStore = create<AiState>((set, get) => ({
 
   openAiAssistant: async (context) => {
     set({ isOpen: true, activeContext: context });
-    if (get().messages.length === 0) {
+    
+    // Always load fresh contextual greeting if messages empty or context provided
+    if (get().messages.length === 0 || context?.entityTitle) {
       set({ isThinking: true });
       const initialMsg = await aiRecommendationService.getInitialGreeting(context);
       set({ messages: [initialMsg], isThinking: false });
@@ -32,12 +34,13 @@ export const useAiStore = create<AiState>((set, get) => ({
   closeAiAssistant: () => set({ isOpen: false }),
 
   sendMessage: async (text: string) => {
-    if (!text.trim()) return;
+    const userText = text.trim();
+    if (!userText) return;
 
     const userMsg: AIMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
-      text: text.trim(),
+      text: userText,
       timestamp: new Date().toISOString(),
     };
 
@@ -51,7 +54,6 @@ export const useAiStore = create<AiState>((set, get) => ({
         isThinking: false,
       }));
     }, 600);
-    const userText = text.trim();
   },
 
   resetConversation: () => set({ messages: [], activeContext: undefined }),

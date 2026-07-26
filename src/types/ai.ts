@@ -24,3 +24,11 @@ export interface AIGiftQuery {
   palette?: string;
   extraContext?: string;
 }
+
+export interface AIContext {
+  role?: AIRole | string;
+  entityTitle?: string;
+  entityType?: 'artwork' | 'product' | 'occasion' | 'general';
+  entityId?: string;
+  initialQuery?: string;
+}
