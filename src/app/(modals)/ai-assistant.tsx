@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -20,6 +20,8 @@ export default function AIAssistantModal() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
+
   const messages = useAiStore(state => state.messages);
   const isThinking = useAiStore(state => state.isThinking);
   const sendMessage = useAiStore(state => state.sendMessage);
@@ -29,11 +31,18 @@ export default function AIAssistantModal() {
   const topInsetPadding = Math.max(insets.top, 16);
 
   const quickPrompts = [
-    'Anniversary gift under CAD 100',
-    'Botanical mug for mom',
-    'Housewarming art print',
-    'Minimalist gift for partner',
+    t('aiModal.quickPrompt1'),
+    t('aiModal.quickPrompt2'),
+    t('aiModal.quickPrompt3'),
+    t('aiModal.quickPrompt4'),
   ];
+
+  useEffect(() => {
+    // Scroll to bottom when messages update
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages, isThinking]);
 
   const handleSend = (textToSend?: string) => {
     const query = textToSend || inputText;
@@ -51,7 +60,10 @@ export default function AIAssistantModal() {
             <Ionicons name="sparkles" size={16} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>{t('aiModal.title')}</Text>
+            <View style={styles.titleStatusRow}>
+              <Text style={styles.headerTitle}>{t('aiModal.title')}</Text>
+              <View style={styles.onlineDot} />
+            </View>
             <Text style={styles.headerSubtitle}>{t('aiModal.subtitle')}</Text>
           </View>
         </View>
@@ -62,7 +74,12 @@ export default function AIAssistantModal() {
       </View>
 
       {/* Messages Scroll Area */}
-      <ScrollView style={styles.messagesContainer} contentContainerStyle={styles.messagesContent}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.messagesContainer} 
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
+      >
         {messages.map(msg => (
           <View 
             key={msg.id} 
@@ -70,7 +87,7 @@ export default function AIAssistantModal() {
           >
             {msg.sender === 'assistant' && (
               <View style={styles.aiAvatar}>
-                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+                <Ionicons name="sparkles" size={12} color="#FFFFFF" />
               </View>
             )}
 
@@ -108,6 +125,7 @@ export default function AIAssistantModal() {
               key={idx} 
               style={styles.promptChip} 
               onPress={() => handleSend(p)}
+              activeOpacity={0.8}
             >
               <Text style={styles.promptChipText}>{p}</Text>
             </TouchableOpacity>
@@ -125,8 +143,8 @@ export default function AIAssistantModal() {
           onChangeText={setInputText}
           onSubmitEditing={() => handleSend()}
         />
-        <TouchableOpacity style={styles.sendBtn} onPress={() => handleSend()} activeOpacity={0.8}>
-          <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+        <TouchableOpacity style={styles.sendBtn} onPress={() => handleSend()} activeOpacity={0.85}>
+          <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -161,10 +179,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#141414',
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4E8765',
   },
   headerSubtitle: {
     fontSize: 11,
@@ -192,16 +221,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   aiAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#141414',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   bubble: {
-    maxWidth: '85%',
+    maxWidth: '88%',
     padding: DesignTokens.spacing.md,
     borderRadius: DesignTokens.radius.md,
   },
@@ -222,7 +251,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   recommendationsList: {
-    marginTop: 12,
+    marginTop: 8,
     gap: 8,
   },
   thinkingBox: {
