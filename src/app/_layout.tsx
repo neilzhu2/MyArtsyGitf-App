@@ -15,7 +15,11 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="(modals)/ai-assistant" 
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }} 
+          options={{ 
+            presentation: 'modal', 
+            animation: 'slide_from_bottom',
+            gestureEnabled: false, // Prevents accidental swipe-down dismissal
+          }} 
         />
         <Stack.Screen 
           name="(modals)/cart" 

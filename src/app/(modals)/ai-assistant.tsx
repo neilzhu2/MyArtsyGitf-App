@@ -32,12 +32,24 @@ export default function AIAssistantModal() {
   const [inputText, setInputText] = useState('');
   const [keyboardPad, setKeyboardPad] = useState(0);
 
-  const quickPrompts = [
-    t('aiModal.quickPrompt1'),
-    t('aiModal.quickPrompt2'),
-    t('aiModal.quickPrompt3'),
-    t('aiModal.quickPrompt4'),
-  ];
+  // Guided Wizard State
+  const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
+  const [selectedOccasion, setSelectedOccasion] = useState<string | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+
+  const isZh = i18nIsZh();
+
+  const recipientPresets = isZh 
+    ? ['👩‍👦 妈妈/长辈', '💑 伴侣/爱人', '🏡 朋友新居', '💼 职场同行']
+    : ['👩‍👦 Mom / Parents', '💑 Partner / Spouse', '🏡 Housewarming', '💼 Colleague / Mentor'];
+
+  const occasionPresets = isZh
+    ? ['🎂 生日快乐', '💍 周年纪念', '🏠 迁居志庆', '🎁 表达致意']
+    : ['🎂 Birthday', '💍 Anniversary', '🏠 Housewarming', '🎁 Thank You'];
+
+  const budgetPresets = isZh
+    ? ['💵 CAD 50 以下', '💳 CAD 50 - 100', '💎 CAD 100+']
+    : ['💵 Under $50 CAD', '💳 $50 - $100 CAD', '💎 $100+ CAD'];
 
   // 1. Listen for real keyboard frame (Memoria LEARNINGS.md Rule 1)
   useEffect(() => {
@@ -55,12 +67,16 @@ export default function AIAssistantModal() {
     };
   }, []);
 
-  // 2. Auto-scroll to end when messages or keyboard frame updates
+  // 2. Auto-scroll to end when messages update
   useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages, isThinking, keyboardPad]);
+
+  function i18nIsZh() {
+    return (t('common.saveDraft') || '').includes('保存') || true;
+  }
 
   const handleSend = (textToSend?: string) => {
     const query = textToSend || inputText;
@@ -69,9 +85,26 @@ export default function AIAssistantModal() {
     setInputText('');
   };
 
+  const handlePresetSelect = (type: 'recipient' | 'occasion' | 'budget', value: string) => {
+    let r = selectedRecipient;
+    let o = selectedOccasion;
+    let b = selectedBudget;
+
+    if (type === 'recipient') { r = r === value ? null : value; setSelectedRecipient(r); }
+    if (type === 'occasion') { o = o === value ? null : value; setSelectedOccasion(o); }
+    if (type === 'budget') { b = b === value ? null : value; setSelectedBudget(b); }
+
+    // Build combination prompt and auto-trigger AI recommendation
+    const parts = [r, o, b].filter(Boolean);
+    if (parts.length > 0) {
+      const combinedText = parts.join(' • ');
+      sendMessage(combinedText);
+    }
+  };
+
   return (
     <View style={styles.outerWrapper}>
-      {/* Header Bar - Fixed compact padding (No double top padding gap) */}
+      {/* Header Bar */}
       <View style={styles.headerBar}>
         <View style={styles.titleContainer}>
           <View style={styles.sparkleIcon}>
@@ -91,7 +124,7 @@ export default function AIAssistantModal() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages Scroll Area - Modal-Aware Keyboard Insets */}
+      {/* Messages Scroll Area */}
       <ScrollView 
         ref={scrollViewRef}
         style={styles.messagesContainer} 
@@ -136,26 +169,59 @@ export default function AIAssistantModal() {
         )}
       </ScrollView>
 
-      {/* Quick Prompt Chips (hidden when keyboard is open to save space) */}
+      {/* Guided 3-Step Preset Options (Visible when keyboard closed) */}
       {keyboardPad === 0 && (
-        <View style={styles.quickPromptsContainer}>
-          <Text style={styles.quickPromptHeader}>{t('aiModal.demoQueries')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPromptsScroll}>
-            {quickPrompts.map((p, idx) => (
+        <View style={styles.wizardContainer}>
+          <Text style={styles.wizardHeader}>送礼灵感预设选项 (点击直接匹配)</Text>
+
+          {/* Row 1: Recipient */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.wizardScroll}>
+            <Text style={styles.groupLabel}>送给谁:</Text>
+            {recipientPresets.map((r, idx) => (
               <TouchableOpacity 
                 key={idx} 
-                style={styles.promptChip} 
-                onPress={() => handleSend(p)}
+                style={[styles.wizardChip, selectedRecipient === r && styles.activeWizardChip]} 
+                onPress={() => handlePresetSelect('recipient', r)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.promptChipText}>{p}</Text>
+                <Text style={[styles.wizardChipText, selectedRecipient === r && styles.activeWizardChipText]}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Row 2: Occasion */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.wizardScroll}>
+            <Text style={styles.groupLabel}>场合:</Text>
+            {occasionPresets.map((o, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.wizardChip, selectedOccasion === o && styles.activeWizardChip]} 
+                onPress={() => handlePresetSelect('occasion', o)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.wizardChipText, selectedOccasion === o && styles.activeWizardChipText]}>{o}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Row 3: Budget */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.wizardScroll}>
+            <Text style={styles.groupLabel}>预算:</Text>
+            {budgetPresets.map((b, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={[styles.wizardChip, selectedBudget === b && styles.activeWizardChip]} 
+                onPress={() => handlePresetSelect('budget', b)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.wizardChipText, selectedBudget === b && styles.activeWizardChipText]}>{b}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
       )}
 
-      {/* Input Bar - Dynamically lifts above system keyboard */}
+      {/* Input Bar */}
       <View style={[
         styles.inputBar, 
         { paddingBottom: keyboardPad > 0 ? keyboardPad : Math.max(insets.bottom, 12) }
@@ -291,37 +357,52 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: DesignTokens.colors.text.secondary,
   },
-  quickPromptsContainer: {
+  wizardContainer: {
     borderTopWidth: 1,
     borderTopColor: DesignTokens.colors.cardBorder,
     paddingTop: 8,
+    paddingBottom: 4,
     backgroundColor: '#FAF8F5',
+    gap: 6,
   },
-  quickPromptHeader: {
+  wizardHeader: {
     fontSize: 10,
     fontWeight: '700',
     color: DesignTokens.colors.text.muted,
     paddingHorizontal: DesignTokens.spacing.lg,
-    marginBottom: 4,
     letterSpacing: 0.5,
   },
-  quickPromptsScroll: {
+  wizardScroll: {
     paddingHorizontal: DesignTokens.spacing.lg,
-    paddingBottom: 8,
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
   },
-  promptChip: {
+  groupLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: DesignTokens.colors.text.secondary,
+    marginRight: 2,
+  },
+  wizardChip: {
     backgroundColor: DesignTokens.colors.paper,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: DesignTokens.radius.round,
     borderWidth: 1,
     borderColor: DesignTokens.colors.cardBorder,
   },
-  promptChipText: {
-    fontSize: 12,
+  activeWizardChip: {
+    backgroundColor: '#C48B47',
+    borderColor: '#C48B47',
+  },
+  wizardChipText: {
+    fontSize: 11,
     fontWeight: '600',
     color: DesignTokens.colors.text.primary,
+  },
+  activeWizardChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   inputBar: {
     flexDirection: 'row',

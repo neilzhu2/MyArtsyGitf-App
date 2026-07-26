@@ -10,51 +10,43 @@ export class AIRecommendationService {
     // 1. Triggered from Artwork Detail Page
     if (context?.entityType === 'artwork' || (context?.entityTitle && context?.role === 'curator')) {
       const artTitle = context.entityTitle || 'Artwork';
-      const matched = MOCK_GIFT_CONCEPTS.slice(0, 2);
-
       const text = isZh
-        ? `您好！我是您的 **AI 灵感顾问**。针对艺术作品 **“${artTitle}”**，我已为您智能生成了 2 款最匹配的实体礼品概念：`
-        : `Hello! Looking at artwork **"${artTitle}"**, I generated 2 curated physical gift concepts for you:`;
+        ? `您好！针对艺术作品 **“${artTitle}”**，我可以为您挑选最匹配的实体礼品载体（如陶瓷马克杯、丝绸围巾或艺术挂画），并定制赠言。请问想了解哪些选项？`
+        : `Hello! Looking at artwork **"${artTitle}"**, I can suggest complementary gift items and inscriptions. How would you like to explore?`;
 
       return {
         id: `ai-greet-${Date.now()}`,
         sender: 'assistant',
         text,
         timestamp: new Date().toISOString(),
-        recommendations: matched,
       };
     }
 
     // 2. Triggered from Product Detail Page
     if (context?.entityType === 'product') {
       const prodTitle = context.entityTitle || 'Product';
-      const matched = MOCK_GIFT_CONCEPTS.slice(1, 3);
-
       const text = isZh
-        ? `您好！针对礼品载体 **“${prodTitle}”**，我已为您匹配了最动人的正版艺术图样与专属铭文：`
-        : `Hello! For physical gift **"${prodTitle}"**, I matched recommended licensed artworks and gift card inscriptions:`;
+        ? `您好！针对礼品 **“${prodTitle}”**，我可以为您推荐最搭配的正版艺术图样与礼卡铭文。请问是为您自己还是哪位朋友挑选？`
+        : `Hello! For physical gift **"${prodTitle}"**, I can match licensed artworks and custom gift card inscriptions. Who are you shopping for?`;
 
       return {
         id: `ai-greet-${Date.now()}`,
         sender: 'assistant',
         text,
         timestamp: new Date().toISOString(),
-        recommendations: matched,
       };
     }
 
-    // 3. General AI Concierge Trigger (from Gifts tab "用 AI 寻觅礼品灵感" or FAB "灵感顾问")
-    const matched = MOCK_GIFT_CONCEPTS.slice(0, 3);
+    // 3. Polite, Warm Gifting Concierge Greeting (No pushy card dump)
     const greetingText = isZh
-      ? `您好！我是 **MyArtsyGift AI 礼品顾问**。请告诉我您的送礼需求（如送礼对象、节日场合、偏好风格或预算），或从下方热门灵感中选择：`
-      : `Hello! I am your **MyArtsyGift AI Concierge**. Tell me about your gift need (recipient, occasion, style, or budget), or select from popular gift queries below:`;
+      ? `您好，欢迎来到 MyArtsyGift 灵感工坊。我是您的 AI 艺术送礼顾问。\n\n今天想为哪位特别的朋友或场合挑选礼物？您可以使用下方预设的选项组合，也可以直接告诉我您的心意。`
+      : `Welcome to MyArtsyGift. I am your AI Art & Gift Concierge.\n\nWho are you choosing a gift for today? You can select from the preset options below or type your gift thoughts directly.`;
 
     return {
       id: `ai-greet-${Date.now()}`,
       sender: 'assistant',
       text: greetingText,
       timestamp: new Date().toISOString(),
-      recommendations: matched,
     };
   }
 
@@ -76,7 +68,7 @@ export class AIRecommendationService {
       matchedConcepts = MOCK_GIFT_CONCEPTS.filter(c => c.occasion === 'housewarming' || c.recipient === 'art-collectors');
     } else if (
       textLower.includes('birthday') || textLower.includes('mom') || textLower.includes('mother') || textLower.includes('parent') ||
-      textLower.includes('生日') || textLower.includes('妈妈') || textLower.includes('母亲')
+      textLower.includes('生日') || textLower.includes('妈妈') || textLower.includes('母亲') || textLower.includes('长辈')
     ) {
       matchedConcepts = MOCK_GIFT_CONCEPTS.filter(c => c.occasion === 'birthday' || c.recipient === 'parents');
     } else {
@@ -103,11 +95,11 @@ export class AIRecommendationService {
 
     if (isZh) {
       responseText = count > 0 
-        ? `我为您精心匹配了 ${count} 款艺术礼品方案。您可以直接在卡片上点击 **“定制礼品”** 一键进入 2D 工作室调整：`
-        : `以下是为您精选的艺术送礼灵感方案：`;
+        ? `针对您的心意，我为您精选了 ${count} 款专属礼品方案。您可以点击卡片上的 **“定制礼品”** 在 2D 工作室中预览与调整：`
+        : `以下是为您精选的艺术送礼方案：`;
     } else {
       responseText = count > 0 
-        ? `I curated ${count} visual gift concept${count > 1 ? 's' : ''} based on your request. Tap **Customize** on any recommendation card to open it directly in the Customization Studio:`
+        ? `I curated ${count} visual gift concept${count > 1 ? 's' : ''} for your request. Tap **Customize** on any recommendation card to preview in the Customization Studio:`
         : `Here are our top curated art gift recommendations:`;
     }
 
